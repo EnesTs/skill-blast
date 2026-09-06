@@ -1,0 +1,61 @@
+name: match3
+description: "A new Flutter Match-3 game project with Flame and Riverpod."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Oyun Motoru & Ses Paketleri
+  flame: ^1.18.0
+  flame_audio: ^2.1.6
+
+  # Durum Yönetimi & Yerel Depolama
+  flutter_riverpod: ^2.5.1
+  shared_preferences: ^2.5.5
+
+  # Tipografi & Arayüz İyileştirmeleri
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+  
+  # Uygulama İkonu Oluşturucu
+  flutter_launcher_icons: ^0.13.1
+
+  # Native Açılış Ekranı (Splash Screen) Oluşturucu
+  flutter_native_splash: ^2.4.1
+
+# Uygulama İkon Yapılandırması
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21
+
+# Native Splash Ekranı Yapılandırması
+flutter_native_splash:
+  color: "#0A0002"
+  image: "assets/images/app_icon.png"
+  
+  android_12:
+    color: "#0A0002"
+    image: "assets/images/app_icon.png"
+
+flutter:
+  uses-material-design: true
+
+  # Görsel ve Ses Dosyaları
+  assets:
+    - assets/images/
+    - assets/audio/
