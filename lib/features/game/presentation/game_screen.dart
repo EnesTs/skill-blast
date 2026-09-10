@@ -10,6 +10,7 @@ import '../logic/game_notifier.dart';
 import '../logic/game_state.dart';
 import '../models/tile_model.dart';
 import 'package:match3/widgets/game_background.dart';
+import 'package:match3/widgets/skill_effects_overlay.dart';
 
 class ScorePopup {
   final String id;
@@ -34,6 +35,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   TileModel? _bombTargetTile;
   bool _isShakingBomb = false;
 
+  TileType? _activeScreenEffect;
+
   Color _backgroundGlowColor = Colors.transparent;
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -51,6 +54,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _glowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeOut),
     )..addListener(() => setState(() {}));
+  }
+
+  void _triggerSkillBurst(TileType type) {
+    setState(() {
+      _activeScreenEffect = type;
+    });
   }
 
   void _triggerTileColorGlow(Color color) {
@@ -106,8 +115,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final gameState = ref.read(gameProvider);
     final notifier = ref.read(gameProvider.notifier);
 
+    // Kırmızı, Yeşil ve Mor skiller için hedef taşa tıklandığı an animasyonu patlat
     if (gameState.activeSkillMode == SkillMode.redBomb) {
-      // Taşa tıklama esnasında ses tetikleme kaldırıldı
+      _triggerSkillBurst(TileType.red);
       _triggerTileColorGlow(Colors.redAccent);
 
       setState(() {
@@ -123,6 +133,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
           _bombTargetTile = null;
         });
       }
+    } else if (gameState.activeSkillMode == SkillMode.greenTransform) {
+      _triggerSkillBurst(TileType.green);
+      _triggerTileColorGlow(Colors.greenAccent);
+    } else if (gameState.activeSkillMode == SkillMode.purpleClear) {
+      _triggerSkillBurst(TileType.purple);
+      _triggerTileColorGlow(Colors.purpleAccent);
     } else {
       _triggerTileColorGlow(tile.type.color);
     }
@@ -173,7 +189,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _showGameOverDialog() {
     final state = ref.read(gameProvider);
     final notifier = ref.read(gameProvider.notifier);
-
     final int earnedScore = state.score;
 
     showDialog(
@@ -367,6 +382,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final gameNotifier = ref.read(gameProvider.notifier);
 
     final blueBonus = gameNotifier.getBlueSkillMoveBonus();
+    final bool isBoardLocked = gameState.isProcessingBoard || gameState.isProcessingSkill;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -384,407 +400,470 @@ class _GameScreenState extends ConsumerState<GameScreen>
           )
         ],
       ),
-      body: GameBackground(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildWalletItem(
-                            icon: Icons.stars,
-                            value: '${gameState.totalPoints}',
-                            color: Colors.cyanAccent,
-                            label: 'Puan'),
-                        _buildWalletItem(
-                            icon: Icons.monetization_on,
-                            color: Colors.grey.shade300,
-                            value: '${gameState.silverCoins}',
-                            label: 'Gümüş'),
-                        _buildWalletItem(
-                            icon: Icons.monetization_on,
-                            color: Colors.amber,
-                            value: '${gameState.goldCoins}',
-                            label: 'Altın'),
-                      ],
-                    ),
-                  ),
-
-                  _buildPassiveBonusIndicators(),
-
-                  const SizedBox(height: 10),
-
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: TileType.values.map((type) {
-                        final maxBar = gameNotifier.getRequiredSkillBarMax(type);
-                        final currentVal = gameState.skillBars[type] ?? 0;
-                        final progress = (currentVal / maxBar).clamp(0.0, 1.0);
-                        final isReady = progress >= 1.0;
-
-                        return GestureDetector(
-                          onTap: () {
-                            if (isReady) {
-                              AudioService.playSkill(); // Ses yalnızca buton tetiklendiğinde çalar
-                              if (type == TileType.blue) {
-                                _triggerPlusMovesEffect();
-                              }
-                              _triggerTileColorGlow(type.color);
-                              gameNotifier.useSkill(type);
-                            } else {
-                              _showSkillInfoDialog(context, type);
-                            }
-                          },
-                          onLongPress: () => _showSkillInfoDialog(context, type),
-                          child: Column(
-                            children: [
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  if (isReady)
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: type.color.withValues(alpha: 0.8),
-                                            blurRadius: 12,
-                                            spreadRadius: 2,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  SizedBox(
-                                    height: 46,
-                                    width: 46,
-                                    child: CircularProgressIndicator(
-                                      value: progress,
-                                      backgroundColor: Colors.white10,
-                                      color: type.color,
-                                      strokeWidth: 5,
-                                    ),
-                                  ),
-                                  Icon(
-                                    _getSkillIcon(type),
-                                    color: isReady ? Colors.white : Colors.white38,
-                                    size: 20,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                isReady ? 'KULLAN' : '$currentVal/$maxBar',
-                                style: TextStyle(
-                                  color: isReady ? Colors.amber : Colors.white54,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  if (gameState.activeSkillMode != SkillMode.none)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade800,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 6)],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.ads_click, color: Colors.white, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            _getSkillInstructionText(gameState.activeSkillMode),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  AspectRatio(
-                    aspectRatio: 1,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.all(8.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: gameState.activeSkillMode != SkillMode.none
-                                ? Colors.amber
-                                : Colors.white24,
-                            width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _backgroundGlowColor != Colors.transparent
-                                ? _backgroundGlowColor.withValues(alpha: 0.6 * _glowAnimation.value)
-                                : Colors.black38,
-                            blurRadius: _backgroundGlowColor != Colors.transparent ? 35 : 15,
-                            spreadRadius: _backgroundGlowColor != Colors.transparent ? 5 : 1,
-                          ),
-                        ],
-                      ),
-                      child: GridView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: gameState.gridCols,
-                          crossAxisSpacing: 5,
-                          mainAxisSpacing: 5,
-                        ),
-                        itemCount: gameState.gridRows * gameState.gridCols,
-                        itemBuilder: (context, index) {
-                          int r = index ~/ gameState.gridCols;
-                          int c = index % gameState.gridCols;
-                          final tile = gameState.grid.length > r &&
-                                  gameState.grid[r].length > c
-                              ? gameState.grid[r][c]
-                              : null;
-
-                          if (tile == null) return const SizedBox();
-
-                          final isSelected = gameState.selectedTile?.id == tile.id;
-                          final isHighlighted = gameState.highlightedTileIds.contains(tile.id);
-
-                          bool isInsideBombZone = false;
-                          if (_bombTargetTile != null) {
-                            int size = gameNotifier.getRedSkillGridSize();
-                            int halfLeft = (size - 1) ~/ 2;
-                            int halfRight = size - 1 - halfLeft;
-
-                            isInsideBombZone = r >= (_bombTargetTile!.row - halfLeft) &&
-                                r <= (_bombTargetTile!.row + halfRight) &&
-                                c >= (_bombTargetTile!.col - halfLeft) &&
-                                c <= (_bombTargetTile!.col + halfRight);
-                          }
-
-                          final isShaking = (_isShakingBomb && isInsideBombZone) || isHighlighted;
-                          final tileGradients = _getTileGradients(tile.type);
-
-                          return GestureDetector(
-                            onTap: () => _handleTileClickWithSkill(tile),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              transform: Matrix4.translationValues(
-                                  isShaking ? (Random().nextDouble() * 8 - 4) : 0,
-                                  isShaking ? (Random().nextDouble() * 8 - 4) : 0,
-                                  0),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: isHighlighted
-                                      ? [Colors.purpleAccent, Colors.deepPurple]
-                                      : (isInsideBombZone
-                                          ? [Colors.redAccent, Colors.red.shade900]
-                                          : tileGradients),
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                                border: isHighlighted
-                                    ? Border.all(color: Colors.amberAccent, width: 3)
-                                    : (isSelected
-                                        ? Border.all(color: Colors.white, width: 3)
-                                        : (isInsideBombZone
-                                            ? Border.all(color: Colors.yellow, width: 2)
-                                            : Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1))),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: isHighlighted
-                                        ? Colors.purple.withValues(alpha: 0.9)
-                                        : (isSelected
-                                            ? tile.type.color.withValues(alpha: 0.9)
-                                            : tile.type.color.withValues(alpha: 0.3)),
-                                    blurRadius: isSelected || isHighlighted ? 12 : 4,
-                                    spreadRadius: isSelected || isHighlighted ? 2 : 0,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Positioned(
-                                    top: 2,
-                                    left: 4,
-                                    right: 4,
-                                    child: Container(
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.35),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    _getTileInnerSymbol(tile.type),
-                                    color: Colors.white.withValues(alpha: 0.35),
-                                    size: 18,
-                                  ),
-                                  if (_bombTargetTile?.id == tile.id)
-                                    const Icon(Icons.local_fire_department,
-                                        color: Colors.amber, size: 28),
-                                  if (isHighlighted)
-                                    const Icon(Icons.auto_awesome,
-                                        color: Colors.amberAccent, size: 22),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
+      body: Stack(
+        children: [
+          GameBackground(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: gameState.doubleScoreMovesLeft > 0
-                                ? Colors.amber
-                                : Colors.white10,
-                            width: gameState.doubleScoreMovesLeft > 0 ? 2 : 1,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white10),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildStatCard(
-                              title: 'KALAN HAMLE',
-                              value: '${gameState.movesLeft}',
-                              icon: Icons.touch_app,
-                              color: gameState.movesLeft <= 5
-                                  ? Colors.redAccent
-                                  : Colors.lightBlueAccent,
-                            ),
-                            Container(height: 36, width: 1, color: Colors.white24),
-                            _buildStatCard(
-                              title: 'OYUN SKORU',
-                              value: '${gameState.score}',
-                              icon: Icons.stars,
-                              color: Colors.amber,
-                              badge: gameState.doubleScoreMovesLeft > 0
-                                  ? '${gameNotifier.getYellowMultiplierValue()}X (${gameState.doubleScoreMovesLeft} Hamle)'
-                                  : null,
-                            ),
+                            _buildWalletItem(
+                                icon: Icons.stars,
+                                value: '${gameState.totalPoints}',
+                                color: Colors.cyanAccent,
+                                label: 'Puan'),
+                            _buildWalletItem(
+                                icon: Icons.monetization_on,
+                                color: Colors.grey.shade300,
+                                value: '${gameState.silverCoins}',
+                                label: 'Gümüş'),
+                            _buildWalletItem(
+                                icon: Icons.monetization_on,
+                                color: Colors.amber,
+                                value: '${gameState.goldCoins}',
+                                label: 'Altın'),
                           ],
                         ),
                       ),
 
-                      ..._scorePopups.map((popup) {
-                        return Positioned(
-                          right: 35,
-                          top: -15,
-                          child: TweenAnimationBuilder<double>(
-                            duration: const Duration(milliseconds: 900),
-                            tween: Tween(begin: 0.0, end: -40.0),
-                            builder: (context, translateY, child) {
-                              return Transform.translate(
-                                offset: Offset(0, translateY),
-                                child: Opacity(
-                                  opacity: (1.0 + (translateY / 40.0)).clamp(0.0, 1.0),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                            color: Colors.black45,
-                                            blurRadius: 6)
-                                      ],
+                      _buildPassiveBonusIndicators(),
+
+                      const SizedBox(height: 10),
+
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: TileType.values.map((type) {
+                            final maxBar = gameNotifier.getRequiredSkillBarMax(type);
+                            final currentVal = gameState.skillBars[type] ?? 0;
+                            final progress = (currentVal / maxBar).clamp(0.0, 1.0);
+                            final isReady = progress >= 1.0;
+
+                            return GestureDetector(
+                              onTap: () {
+                                if (isBoardLocked) return;
+                                if (isReady) {
+                                  AudioService.playSkill();
+
+                                  // Yalnızca anında tetiklenen Mavi ve Sarı buton anında patlar
+                                  if (type == TileType.blue) {
+                                    _triggerSkillBurst(TileType.blue);
+                                    _triggerPlusMovesEffect();
+                                  } else if (type == TileType.yellow) {
+                                    _triggerSkillBurst(TileType.yellow);
+                                  }
+
+                                  _triggerTileColorGlow(type.color);
+                                  gameNotifier.useSkill(type);
+                                } else {
+                                  _showSkillInfoDialog(context, type);
+                                }
+                              },
+                              onLongPress: () => _showSkillInfoDialog(context, type),
+                              child: Column(
+                                children: [
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      if (isReady)
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: type.color.withValues(alpha: 0.8),
+                                                blurRadius: 12,
+                                                spreadRadius: 2,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      SizedBox(
+                                        height: 46,
+                                        width: 46,
+                                        child: CircularProgressIndicator(
+                                          value: progress,
+                                          backgroundColor: Colors.white10,
+                                          color: type.color,
+                                          strokeWidth: 5,
+                                        ),
+                                      ),
+                                      Icon(
+                                        _getTileInnerSymbol(type),
+                                        color: isReady ? Colors.white : Colors.white38,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isReady ? 'KULLAN' : '$currentVal/$maxBar',
+                                    style: TextStyle(
+                                      color: isReady ? Colors.amber : Colors.white54,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    child: Text(
-                                      '+${popup.points}',
-                                      style: const TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 15,
+                                  )
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      if (gameState.activeSkillMode != SkillMode.none)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade800,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 6)],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.ads_click, color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                _getSkillInstructionText(gameState.activeSkillMode),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      IgnorePointer(
+                        ignoring: isBoardLocked,
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                            padding: const EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: gameState.activeSkillMode != SkillMode.none
+                                      ? Colors.amber
+                                      : Colors.white24,
+                                  width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _backgroundGlowColor != Colors.transparent
+                                      ? _backgroundGlowColor.withValues(alpha: 0.6 * _glowAnimation.value)
+                                      : Colors.black38,
+                                  blurRadius: _backgroundGlowColor != Colors.transparent ? 35 : 15,
+                                  spreadRadius: _backgroundGlowColor != Colors.transparent ? 5 : 1,
+                                ),
+                              ],
+                            ),
+                            child: GridView.builder(
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: gameState.gridCols,
+                                crossAxisSpacing: 5,
+                                mainAxisSpacing: 5,
+                              ),
+                              itemCount: gameState.gridRows * gameState.gridCols,
+                              itemBuilder: (context, index) {
+                                int r = index ~/ gameState.gridCols;
+                                int c = index % gameState.gridCols;
+                                final tile = gameState.grid.length > r &&
+                                        gameState.grid[r].length > c
+                                    ? gameState.grid[r][c]
+                                    : null;
+
+                                if (tile == null) {
+                                  return const SizedBox.expand();
+                                }
+
+                                final isSelected = gameState.selectedTile?.id == tile.id;
+                                final isHighlighted = gameState.highlightedTileIds.contains(tile.id);
+
+                                bool isInsideBombZone = false;
+                                if (_bombTargetTile != null) {
+                                  int size = gameNotifier.getRedSkillGridSize();
+                                  int halfLeft = (size - 1) ~/ 2;
+                                  int halfRight = size - 1 - halfLeft;
+
+                                  isInsideBombZone = r >= (_bombTargetTile!.row - halfLeft) &&
+                                      r <= (_bombTargetTile!.row + halfRight) &&
+                                      c >= (_bombTargetTile!.col - halfLeft) &&
+                                      c <= (_bombTargetTile!.col + halfRight);
+                                }
+
+                                final isShaking = (_isShakingBomb && isInsideBombZone) || isHighlighted;
+                                final tileGradients = _getTileGradients(tile.type);
+
+                                return AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 650),
+                                  switchInCurve: Curves.bounceOut,
+                                  layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                                    return Stack(
+                                      fit: StackFit.expand,
+                                      children: <Widget>[
+                                        ...previousChildren,
+                                        if (currentChild != null) currentChild,
+                                      ],
+                                    );
+                                  },
+                                  transitionBuilder: (child, animation) {
+                                    if (child.key != ValueKey(tile.id)) {
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    if (tile.isFalling) {
+                                      return SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: const Offset(0.0, -1.0),
+                                          end: Offset.zero,
+                                        ).animate(animation),
+                                        child: child,
+                                      );
+                                    }
+
+                                    return child;
+                                  },
+                                  child: SizedBox.expand(
+                                    key: ValueKey(tile.id),
+                                    child: GestureDetector(
+                                      onTap: () => _handleTileClickWithSkill(tile),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 150),
+                                        transform: Matrix4.translationValues(
+                                            isShaking ? (Random().nextDouble() * 8 - 4) : 0,
+                                            isShaking ? (Random().nextDouble() * 8 - 4) : 0,
+                                            0),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: isHighlighted
+                                                ? [Colors.purpleAccent, Colors.deepPurple]
+                                                : (isInsideBombZone
+                                                    ? [Colors.redAccent, Colors.red.shade900]
+                                                    : tileGradients),
+                                          ),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: isHighlighted
+                                              ? Border.all(color: Colors.amberAccent, width: 3)
+                                              : (isSelected
+                                                  ? Border.all(color: Colors.white, width: 3)
+                                                  : (isInsideBombZone
+                                                      ? Border.all(color: Colors.yellow, width: 2)
+                                                      : Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1))),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: isHighlighted
+                                                  ? Colors.purple.withValues(alpha: 0.9)
+                                                  : (isSelected
+                                                      ? tile.type.color.withValues(alpha: 0.9)
+                                                      : tile.type.color.withValues(alpha: 0.3)),
+                                              blurRadius: isSelected || isHighlighted ? 12 : 4,
+                                              spreadRadius: isSelected || isHighlighted ? 2 : 0,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Positioned(
+                                              top: 2,
+                                              left: 4,
+                                              right: 4,
+                                              child: Container(
+                                                height: 6,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withValues(alpha: 0.35),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                              ),
+                                            ),
+                                            Icon(
+                                              _getTileInnerSymbol(tile.type),
+                                              color: Colors.white.withValues(alpha: 0.4),
+                                              size: 20,
+                                            ),
+                                            if (_bombTargetTile?.id == tile.id)
+                                              const Icon(Icons.local_fire_department,
+                                                  color: Colors.amber, size: 28),
+                                            if (isHighlighted)
+                                              const Icon(Icons.auto_awesome,
+                                              color: Colors.amberAccent, size: 22),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      }),
-
-                      if (_showPlusMovesAnimation)
-                        Positioned(
-                          top: -30,
-                          left: 40,
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 500),
-                            opacity: _showPlusMovesAnimation ? 1.0 : 0.0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.greenAccent.shade400,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: const [
-                                  BoxShadow(color: Colors.black45, blurRadius: 8)
-                                ],
-                              ),
-                              child: Text(
-                                '+$blueBonus HAMLE!',
-                                style: const TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14),
-                              ),
+                                );
+                              },
                             ),
                           ),
                         ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: gameState.doubleScoreMovesLeft > 0
+                                    ? Colors.amber
+                                    : Colors.white10,
+                                width: gameState.doubleScoreMovesLeft > 0 ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildStatCard(
+                                  title: 'KALAN HAMLE',
+                                  value: '${gameState.movesLeft}',
+                                  icon: Icons.touch_app,
+                                  color: gameState.movesLeft <= 5
+                                      ? Colors.redAccent
+                                      : Colors.lightBlueAccent,
+                                ),
+                                Container(height: 36, width: 1, color: Colors.white24),
+                                _buildStatCard(
+                                  title: 'OYUN SKORU',
+                                  value: '${gameState.score}',
+                                  icon: Icons.stars,
+                                  color: Colors.amber,
+                                  badge: gameState.doubleScoreMovesLeft > 0
+                                      ? '${gameNotifier.getYellowMultiplierValue()}X (${gameState.doubleScoreMovesLeft} Hamle)'
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          ..._scorePopups.map((popup) {
+                            return Positioned(
+                              right: 35,
+                              top: -15,
+                              child: TweenAnimationBuilder<double>(
+                                duration: const Duration(milliseconds: 900),
+                                tween: Tween(begin: 0.0, end: -40.0),
+                                builder: (context, translateY, child) {
+                                  return Transform.translate(
+                                    offset: Offset(0, translateY),
+                                    child: Opacity(
+                                      opacity: (1.0 + (translateY / 40.0)).clamp(0.0, 1.0),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber,
+                                          borderRadius: BorderRadius.circular(10),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                                color: Colors.black45,
+                                                blurRadius: 6)
+                                          ],
+                                        ),
+                                        child: Text(
+                                          '+${popup.points}',
+                                          style: const TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          }),
+
+                          if (_showPlusMovesAnimation)
+                            Positioned(
+                              top: -30,
+                              left: 40,
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 500),
+                                opacity: _showPlusMovesAnimation ? 1.0 : 0.0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.greenAccent.shade400,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: const [
+                                      BoxShadow(color: Colors.black45, blurRadius: 8)
+                                    ],
+                                  ),
+                                  child: Text(
+                                    '+$blueBonus HAMLE!',
+                                    style: const TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
                     ],
                   ),
-
-                  const SizedBox(height: 12),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+
+          // TAM EKRAN PARÇACIK VE TEMATİK ANİMASYON KATMANI
+          if (_activeScreenEffect != null)
+            Positioned.fill(
+              child: SkillEffectsOverlay(
+                type: _activeScreenEffect!,
+                onFinished: () {
+                  if (mounted) {
+                    setState(() {
+                      _activeScreenEffect = null;
+                    });
+                  }
+                },
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -859,21 +938,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     );
   }
 
-  IconData _getSkillIcon(TileType type) {
-    switch (type) {
-      case TileType.blue:
-        return Icons.add_alarm;
-      case TileType.red:
-        return Icons.local_fire_department;
-      case TileType.green:
-        return Icons.transform;
-      case TileType.yellow:
-        return Icons.bolt;
-      case TileType.purple:
-        return Icons.cleaning_services;
-    }
-  }
-
   String _getSkillInstructionText(SkillMode mode) {
     final notifier = ref.read(gameProvider.notifier);
     switch (mode) {
@@ -903,7 +967,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(_getSkillIcon(type), color: type.color),
+            Icon(_getTileInnerSymbol(type), color: type.color),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

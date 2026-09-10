@@ -35,7 +35,6 @@ class GameNotifier extends StateNotifier<GameState> {
     _startTicketTimer();
   }
 
-  /// Efsanevi Paket Kademesini Arttırır (Kalıcı State)
   void incrementLegendaryTier() {
     state = state.copyWith(
       legendaryPackageTier: state.legendaryPackageTier + 1,
@@ -43,7 +42,6 @@ class GameNotifier extends StateNotifier<GameState> {
     _saveData();
   }
 
-  /// Günlük Ödülü Alır (15 Günlük Yeni Ödül Dengesi)
   bool claimDailyReward() {
     if (!state.isDailyRewardClaimable) return false;
 
@@ -53,50 +51,24 @@ class GameNotifier extends StateNotifier<GameState> {
     int newBonusTickets = state.bonusTickets;
 
     switch (currentDay) {
-      case 1:
-        newSilver += 100;
-        break;
-      case 2:
-        newBonusTickets += 1;
-        break;
-      case 3:
-        newSilver += 200;
-        break;
-      case 4:
-        newGold += 20;
-        break;
-      case 5:
-        newBonusTickets += 2;
-        break;
-      case 6:
-        newSilver += 400;
-        break;
+      case 1: newSilver += 100; break;
+      case 2: newBonusTickets += 1; break;
+      case 3: newSilver += 200; break;
+      case 4: newGold += 20; break;
+      case 5: newBonusTickets += 2; break;
+      case 6: newSilver += 400; break;
       case 7:
         newBonusTickets += 2;
         newSilver += 200;
         newGold += 50;
         break;
-      case 8:
-        newSilver += 500;
-        break;
-      case 9:
-        newBonusTickets += 3;
-        break;
-      case 10:
-        newGold += 40;
-        break;
-      case 11:
-        newSilver += 750;
-        break;
-      case 12:
-        newBonusTickets += 4;
-        break;
-      case 13:
-        newGold += 75;
-        break;
-      case 14:
-        newSilver += 1000;
-        break;
+      case 8: newSilver += 500; break;
+      case 9: newBonusTickets += 3; break;
+      case 10: newGold += 40; break;
+      case 11: newSilver += 750; break;
+      case 12: newBonusTickets += 4; break;
+      case 13: newGold += 75; break;
+      case 14: newSilver += 1000; break;
       case 15:
         newBonusTickets += 5;
         newSilver += 500;
@@ -166,9 +138,7 @@ class GameNotifier extends StateNotifier<GameState> {
     return true;
   }
 
-  bool useTicket() {
-    return startGameWithTicket();
-  }
+  bool useTicket() => startGameWithTicket();
 
   void addGold(int amount) {
     state = state.copyWith(goldCoins: state.goldCoins + amount);
@@ -206,7 +176,7 @@ class GameNotifier extends StateNotifier<GameState> {
 
   int getRequiredSkillBarMax(TileType type) {
     int multiplier = state.skillCostMultipliers[type] ?? 1;
-    return 100 + ((multiplier - 1) * 25);
+    return 100 + ((multiplier - 1) * 40);
   }
 
   int getBlueSkillMoveBonus() {
@@ -217,15 +187,11 @@ class GameNotifier extends StateNotifier<GameState> {
   int getRedSkillGridSize() {
     int lvl = getSkillLevel(SkillType.redExplosion);
     switch (lvl) {
-      case 1:
-        return 4;
-      case 2:
-        return 5;
-      case 3:
-        return 6;
+      case 1: return 4;
+      case 2: return 5;
+      case 3: return 6;
       case 0:
-      default:
-        return 3;
+      default: return 3;
     }
   }
 
@@ -257,8 +223,7 @@ class GameNotifier extends StateNotifier<GameState> {
     final savedRewardDay = prefs.getInt('dailyRewardDay') ?? 1;
     final savedRewardTimeStr = prefs.getString('lastDailyRewardTime');
     DateTime? lastRewardTime = savedRewardTimeStr != null ? DateTime.tryParse(savedRewardTimeStr) : null;
-
-    final savedLegendaryTier = prefs.getInt('legendaryPackageTier') ?? 0; // 👈 Yüklendi
+    final savedLegendaryTier = prefs.getInt('legendaryPackageTier') ?? 0;
 
     DateTime? nextTime =
         savedNextTimeStr != null ? DateTime.tryParse(savedNextTimeStr) : null;
@@ -284,7 +249,7 @@ class GameNotifier extends StateNotifier<GameState> {
       clearNextTicketTime: nextTime == null,
       dailyRewardDay: savedRewardDay,
       lastDailyRewardTime: lastRewardTime,
-      legendaryPackageTier: savedLegendaryTier, // 👈 Aktarıldı
+      legendaryPackageTier: savedLegendaryTier,
     );
 
     _isDataLoaded = true;
@@ -306,11 +271,10 @@ class GameNotifier extends StateNotifier<GameState> {
       await prefs.setString('lastDailyRewardTime', state.lastDailyRewardTime!.toIso8601String());
     }
 
-    await prefs.setInt('legendaryPackageTier', state.legendaryPackageTier); // 👈 Kaydedildi
+    await prefs.setInt('legendaryPackageTier', state.legendaryPackageTier);
 
     if (state.nextTicketTime != null) {
-      await prefs.setString(
-          'nextTicketTime', state.nextTicketTime!.toIso8601String());
+      await prefs.setString('nextTicketTime', state.nextTicketTime!.toIso8601String());
     } else {
       await prefs.remove('nextTicketTime');
     }
@@ -366,6 +330,7 @@ class GameNotifier extends StateNotifier<GameState> {
           row: r,
           col: c,
           type: type,
+          isFalling: false,
         );
       }
     }
@@ -387,6 +352,7 @@ class GameNotifier extends StateNotifier<GameState> {
       doubleScoreMovesLeft: 0,
       highlightedTileIds: {},
       isProcessingSkill: false,
+      isProcessingBoard: false,
     );
   }
 
@@ -406,7 +372,10 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   void onTileTap(TileModel tile) async {
-    if (state.movesLeft <= 0 || state.highlightedTileIds.isNotEmpty || state.isProcessingSkill) return;
+    if (state.movesLeft <= 0 ||
+        state.highlightedTileIds.isNotEmpty ||
+        state.isProcessingSkill ||
+        state.isProcessingBoard) return;
 
     if (state.activeSkillMode != SkillMode.none) {
       final mode = state.activeSkillMode;
@@ -418,19 +387,12 @@ class GameNotifier extends StateNotifier<GameState> {
       try {
         if (mode == SkillMode.redBomb) {
           int size = getRedSkillGridSize();
-          
           int halfLeft = (size - 1) ~/ 2;
           int halfRight = size - 1 - halfLeft;
 
           List<TileModel> toExplode = [];
-
-          int startR = tile.row - halfLeft;
-          int endR = tile.row + halfRight;
-          int startC = tile.col - halfLeft;
-          int endC = tile.col + halfRight;
-
-          for (int r = startR; r <= endR; r++) {
-            for (int c = startC; c <= endC; c++) {
+          for (int r = tile.row - halfLeft; r <= tile.row + halfRight; r++) {
+            for (int c = tile.col - halfLeft; c <= tile.col + halfRight; c++) {
               if (r >= 0 && r < state.gridRows && c >= 0 && c < state.gridCols) {
                 final t = state.grid[r][c];
                 if (t != null) toExplode.add(t);
@@ -460,11 +422,11 @@ class GameNotifier extends StateNotifier<GameState> {
               highlightedTileIds: targetTiles.map((t) => t.id).toSet(),
             );
 
-            await Future.delayed(const Duration(milliseconds: 600));
+            await Future.delayed(const Duration(milliseconds: 850));
 
             List<List<TileModel?>> grid = _cloneGrid(state.grid);
             for (var t in targetTiles) {
-              grid[t.row][t.col] = t.copyWith(type: targetType);
+              grid[t.row][t.col] = t.copyWith(type: targetType, isFalling: false);
             }
 
             state = state.copyWith(grid: grid, highlightedTileIds: {});
@@ -561,14 +523,14 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   Future<void> _swapAndCheckMatches(TileModel a, TileModel b) async {
+    state = state.copyWith(isProcessingBoard: true);
+
     List<List<TileModel?>> tempGrid = _cloneGrid(state.grid);
-    tempGrid[a.row][a.col] = b.copyWith(row: a.row, col: a.col);
-    tempGrid[b.row][b.col] = a.copyWith(row: b.row, col: b.col);
+    tempGrid[a.row][a.col] = b.copyWith(row: a.row, col: a.col, isFalling: false);
+    tempGrid[b.row][b.col] = a.copyWith(row: b.row, col: b.col, isFalling: false);
 
     int newDoubleScoreMoves = state.doubleScoreMovesLeft;
-    if (newDoubleScoreMoves > 0) {
-      newDoubleScoreMoves--;
-    }
+    if (newDoubleScoreMoves > 0) newDoubleScoreMoves--;
 
     int remainingMoves = state.movesLeft - 1;
 
@@ -581,17 +543,18 @@ class GameNotifier extends StateNotifier<GameState> {
 
     final matches = _findMatches(tempGrid);
     if (matches.isEmpty) {
-      await Future.delayed(const Duration(milliseconds: 250));
-      tempGrid[a.row][a.col] = a;
-      tempGrid[b.row][b.col] = b;
+      await Future.delayed(const Duration(milliseconds: 300));
+      tempGrid[a.row][a.col] = a.copyWith(isFalling: false);
+      tempGrid[b.row][b.col] = b.copyWith(isFalling: false);
       state = state.copyWith(
         grid: tempGrid,
         movesLeft: state.movesLeft + 1,
-        doubleScoreMovesLeft:
-            state.doubleScoreMovesLeft > 0 ? state.doubleScoreMovesLeft + 1 : 0,
+        doubleScoreMovesLeft: state.doubleScoreMovesLeft > 0 ? state.doubleScoreMovesLeft + 1 : 0,
+        isProcessingBoard: false,
       );
     } else {
       await _processMatches(matches);
+      state = state.copyWith(isProcessingBoard: false);
     }
 
     if (state.movesLeft <= 0 && !_hasUsedLastChanceInCurrentGame) {
@@ -642,6 +605,8 @@ class GameNotifier extends StateNotifier<GameState> {
   Future<void> _processMatches(List<TileModel> matches) async {
     if (matches.isEmpty) return;
 
+    state = state.copyWith(isProcessingBoard: true);
+
     int boxScoreLvl = getSkillLevel(SkillType.passiveBoxScore);
     int fastSkillLvl = getSkillLevel(SkillType.passiveComboBonus);
 
@@ -653,7 +618,6 @@ class GameNotifier extends StateNotifier<GameState> {
     if (boxScoreLvl == 3) bonusMultiplier = 1.35;
 
     int addedScore = (baseScore * bonusMultiplier).round();
-
     if (state.doubleScoreMovesLeft > 0) {
       addedScore *= getYellowMultiplierValue();
     }
@@ -665,7 +629,7 @@ class GameNotifier extends StateNotifier<GameState> {
     if (fastSkillLvl == 2) chargeMultiplier = 1.40;
     if (fastSkillLvl == 3) chargeMultiplier = 1.60;
 
-    int baseCharge = (10 * chargeMultiplier).round();
+    int baseCharge = (8 * chargeMultiplier).round();
 
     for (var tile in matches) {
       int maxBar = getRequiredSkillBarMax(tile.type);
@@ -673,11 +637,7 @@ class GameNotifier extends StateNotifier<GameState> {
       updatedBars[tile.type] = min(maxBar, currentVal + baseCharge);
     }
 
-    state = state.copyWith(
-      score: state.score + addedScore,
-      skillBars: updatedBars,
-    );
-
+    // 1. Patlayan taşları tahtadan sil (boşlukların görünmesi için)
     List<List<TileModel?>> grid = _cloneGrid(state.grid);
     for (var m in matches) {
       if (m.row < state.gridRows && m.col < state.gridCols) {
@@ -685,6 +645,15 @@ class GameNotifier extends StateNotifier<GameState> {
       }
     }
 
+    state = state.copyWith(
+      grid: grid,
+      score: state.score + addedScore,
+      skillBars: updatedBars,
+    );
+
+    await Future.delayed(const Duration(milliseconds: 450));
+
+    // 2. Taşların süzülerek inmesi
     await _applyGravityAndRefill(grid);
   }
 
@@ -696,11 +665,20 @@ class GameNotifier extends StateNotifier<GameState> {
           emptySpaces++;
         } else if (emptySpaces > 0) {
           TileModel original = grid[r][c]!;
-          grid[r + emptySpaces][c] = original.copyWith(row: r + emptySpaces);
+          // Aşağı kayan mevcut taş: Yeni hücrede animasyonu tetiklemek için ID yenilenir ve isFalling: true verilir
+          grid[r + emptySpaces][c] = original.copyWith(
+            id: 'fall_${original.id}_${DateTime.now().microsecondsSinceEpoch}',
+            row: r + emptySpaces,
+            isFalling: true,
+          );
           grid[r][c] = null;
+        } else {
+          // Yerinde sabit duran taşın düşme bayrağı kapatılır
+          grid[r][c] = grid[r][c]!.copyWith(isFalling: false);
         }
       }
 
+      // En tepeden boşluklara yeni üretilen taşlar
       for (int i = 0; i < emptySpaces; i++) {
         final type = TileType.values[_random.nextInt(TileType.values.length)];
         grid[i][c] = TileModel(
@@ -708,28 +686,34 @@ class GameNotifier extends StateNotifier<GameState> {
           row: i,
           col: c,
           type: type,
+          isFalling: true,
         );
       }
     }
 
     state = state.copyWith(grid: grid);
 
-    await Future.delayed(const Duration(milliseconds: 200));
+    // Taşların süzülüp yaylanarak oturmasını bekleme süresi
+    await Future.delayed(const Duration(milliseconds: 850));
+
+    // 3. Kombo kontrolü
     final cascadeMatches = _findMatches(grid);
     if (cascadeMatches.isNotEmpty) {
+      await Future.delayed(const Duration(milliseconds: 350));
       await _processMatches(cascadeMatches);
+    } else {
+      state = state.copyWith(isProcessingBoard: false);
     }
   }
 
   void useSkill(TileType type) {
-    if (state.isProcessingSkill || state.activeSkillMode != SkillMode.none) return;
+    if (state.isProcessingSkill || state.isProcessingBoard || state.activeSkillMode != SkillMode.none) return;
 
     int currentMax = getRequiredSkillBarMax(type);
     if ((state.skillBars[type] ?? 0) < currentMax) return;
 
     Map<TileType, int> updatedBars = Map.from(state.skillBars);
-    Map<TileType, int> updatedMultipliers =
-        Map.from(state.skillCostMultipliers);
+    Map<TileType, int> updatedMultipliers = Map.from(state.skillCostMultipliers);
 
     updatedBars[type] = 0;
     updatedMultipliers[type] = (updatedMultipliers[type] ?? 1) + 1;
@@ -781,14 +765,8 @@ class GameNotifier extends StateNotifier<GameState> {
 
   Future<void> addScoreToWallet() async {
     if (state.score <= 0) return;
-
     final updatedTotalPoints = state.totalPoints + state.score;
-
-    state = state.copyWith(
-      totalPoints: updatedTotalPoints,
-      score: 0,
-    );
-
+    state = state.copyWith(totalPoints: updatedTotalPoints, score: 0);
     await _saveData();
   }
 
@@ -818,11 +796,7 @@ class GameNotifier extends StateNotifier<GameState> {
     await _saveData();
   }
 
-  void buyPackage({
-    int addTickets = 0,
-    int addGold = 0,
-    int addSilver = 0,
-  }) {
+  void buyPackage({int addTickets = 0, int addGold = 0, int addSilver = 0}) {
     state = state.copyWith(
       bonusTickets: state.bonusTickets + addTickets,
       goldCoins: state.goldCoins + addGold,

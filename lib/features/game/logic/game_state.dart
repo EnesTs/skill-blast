@@ -21,13 +21,11 @@ class GameState {
   final int doubleScoreMovesLeft;
   final Set<String> highlightedTileIds;
   final bool isProcessingSkill;
+  final bool isProcessingBoard; // Tahta akıştayken dokunmaları kilitler
 
-  // --- GÜNLÜK ÖDÜL DEĞİŞKENLERİ ---
   final int dailyRewardDay;
   final DateTime? lastDailyRewardTime;
-
-  // --- EFSANEVİ PAKET KADEMESİ ---
-  final int legendaryPackageTier; // 👈 Eklendi
+  final int legendaryPackageTier;
 
   GameState({
     required this.grid,
@@ -48,14 +46,14 @@ class GameState {
     this.doubleScoreMovesLeft = 0,
     this.highlightedTileIds = const {},
     this.isProcessingSkill = false,
+    this.isProcessingBoard = false,
     this.dailyRewardDay = 1,
     this.lastDailyRewardTime,
-    this.legendaryPackageTier = 0, // 👈 Varsayılan 0
+    this.legendaryPackageTier = 0,
   });
 
   int get totalTickets => regenTickets + bonusTickets;
 
-  /// Günlük ödül alınabilir mi? (Son ödülün üzerinden 24 saat geçti mi veya hiç alınmadı mı?)
   bool get isDailyRewardClaimable {
     if (lastDailyRewardTime == null) return true;
     final now = DateTime.now();
@@ -96,9 +94,10 @@ class GameState {
     int? doubleScoreMovesLeft,
     Set<String>? highlightedTileIds,
     bool? isProcessingSkill,
+    bool? isProcessingBoard,
     int? dailyRewardDay,
     DateTime? lastDailyRewardTime,
-    int? legendaryPackageTier, // 👈 Eklendi
+    int? legendaryPackageTier,
   }) {
     return GameState(
       grid: grid ?? this.grid,
@@ -119,9 +118,10 @@ class GameState {
       doubleScoreMovesLeft: doubleScoreMovesLeft ?? this.doubleScoreMovesLeft,
       highlightedTileIds: highlightedTileIds ?? this.highlightedTileIds,
       isProcessingSkill: isProcessingSkill ?? this.isProcessingSkill,
+      isProcessingBoard: isProcessingBoard ?? this.isProcessingBoard,
       dailyRewardDay: dailyRewardDay ?? this.dailyRewardDay,
       lastDailyRewardTime: lastDailyRewardTime ?? this.lastDailyRewardTime,
-      legendaryPackageTier: legendaryPackageTier ?? this.legendaryPackageTier, // 👈 Eklendi
+      legendaryPackageTier: legendaryPackageTier ?? this.legendaryPackageTier,
     );
   }
 }
