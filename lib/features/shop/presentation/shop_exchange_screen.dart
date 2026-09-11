@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../game/logic/game_notifier.dart';
+import '../../game/logic/game_state.dart';
 import 'package:match3/widgets/game_background.dart';
 
 class ShopAndExchangeScreen extends ConsumerStatefulWidget {
@@ -34,13 +35,13 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final gameState = ref.watch(gameProvider);
-    final notifier = ref.read(gameProvider.notifier);
+    final GameState gameState = ref.watch(gameProvider);
+    final GameNotifier notifier = ref.read(gameProvider.notifier);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B).withValues(alpha: 0.9),
+        backgroundColor: const Color(0xFF1E293B).withValues(alpha: 0.95),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -67,11 +68,19 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
       ),
       body: GameBackground(
         child: SafeArea(
-          child: TabBarView(
-            controller: _tabController,
+          child: Column(
             children: [
-              _buildShopTab(context, gameState, notifier),
-              _buildExchangeTab(context, gameState, notifier),
+              // GÜNCEL BAKİYE TAKİP BARI
+              _buildTopLiveBalanceBar(gameState),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildShopTab(context, gameState, notifier),
+                    _buildExchangeTab(context, gameState, notifier),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -79,8 +88,86 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
     );
   }
 
-  Widget _buildShopTab(BuildContext context, dynamic gameState, GameNotifier notifier) {
-    final int legendaryTier = gameState.legendaryPackageTier as int? ?? 0;
+  // --- OYUNCUNUN GÜNCEL VARLIKLARINI TAKİP ETTİĞİ CANLI PANEL ---
+  Widget _buildTopLiveBalanceBar(GameState gameState) {
+    final int tickets = gameState.totalTickets;
+    final int goldCoins = gameState.goldCoins;
+    final int silverCoins = gameState.silverCoins;
+    final int totalPoints = gameState.totalPoints;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A).withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildMiniBalancePill('BİLET', '$tickets', '🎟️', Colors.pinkAccent),
+          _buildPillDivider(),
+          _buildMiniBalancePill('ALTIN', '$goldCoins', '🪙', Colors.amber),
+          _buildPillDivider(),
+          _buildMiniBalancePill('GÜMÜŞ', '$silverCoins', '🥈', Colors.grey.shade300),
+          _buildPillDivider(),
+          _buildMiniBalancePill('PUAN', '$totalPoints', '💎', Colors.cyanAccent),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniBalancePill(String label, String value, String icon, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 5),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white38,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPillDivider() {
+    return Container(
+      width: 1,
+      height: 22,
+      color: Colors.white10,
+    );
+  }
+
+  Widget _buildShopTab(BuildContext context, GameState gameState, GameNotifier notifier) {
+    final int legendaryTier = gameState.legendaryPackageTier;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -184,8 +271,8 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
     );
   }
 
-  Widget _buildLegendaryPackageCard(dynamic gameState, GameNotifier notifier) {
-    final int currentTier = gameState.legendaryPackageTier as int? ?? 0;
+  Widget _buildLegendaryPackageCard(GameState gameState, GameNotifier notifier) {
+    final int currentTier = gameState.legendaryPackageTier;
 
     String title = '';
     String itemsText = '';
@@ -266,10 +353,9 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
   }
 
   Widget _buildExchangeTab(
-      BuildContext context, dynamic gameState, GameNotifier notifier) {
-    final int totalPoints = gameState.totalPoints as int? ?? 0;
-    final int silverCoins = gameState.silverCoins as int? ?? 0;
-    final int goldCoins = gameState.goldCoins as int? ?? 0;
+      BuildContext context, GameState gameState, GameNotifier notifier) {
+    final int totalPoints = gameState.totalPoints;
+    final int silverCoins = gameState.silverCoins;
 
     int maxGoldConvertible = totalPoints ~/ 10000;
     int maxSilverConvertible = totalPoints ~/ 5000;
@@ -296,17 +382,6 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              _buildBalanceCard('PUAN', '$totalPoints', '💎', Colors.cyanAccent),
-              const SizedBox(width: 8),
-              _buildBalanceCard('GÜMÜŞ', '$silverCoins', '🥈', Colors.grey.shade300),
-              const SizedBox(width: 8),
-              _buildBalanceCard('ALTIN', '$goldCoins', '🪙', Colors.amber),
-            ],
-          ),
-          const SizedBox(height: 20),
-
           _buildExchangeCard(
             title: 'Gümüş ➔ Altın Borsa',
             rateText: '5 Gümüş = 1 Altın',
@@ -397,36 +472,6 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
                 : null,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBalanceCard(String label, String value, String icon, Color valueColor) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: valueColor.withValues(alpha: 0.4)),
-          boxShadow: [
-            BoxShadow(
-              color: valueColor.withValues(alpha: 0.08),
-              blurRadius: 8,
-            )
-          ],
-        ),
-        child: Column(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 22)),
-            const SizedBox(height: 4),
-            Text(value,
-                style: TextStyle(
-                    color: valueColor, fontWeight: FontWeight.bold, fontSize: 14)),
-            Text(label,
-                style: const TextStyle(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.w600)),
-          ],
-        ),
       ),
     );
   }

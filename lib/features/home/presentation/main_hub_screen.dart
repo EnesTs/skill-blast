@@ -4,9 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:match3/features/game/logic/game_notifier.dart';
 import 'package:match3/features/game/presentation/game_screen.dart';
-import 'package:match3/features/island/views/island_screen.dart';
 import 'package:match3/features/shop/presentation/shop_exchange_screen.dart';
 import 'package:match3/features/skills/presentation/skill_tree_screen.dart';
+import 'package:match3/features/vault/logic/vault_notifier.dart';
+import 'package:match3/features/vault/views/vault_screen.dart';
 import 'package:match3/features/home/presentation/widgets/fortune_games_modal.dart';
 import 'package:match3/features/home/presentation/widgets/daily_reward_modal.dart';
 import 'package:match3/widgets/game_background.dart';
@@ -72,7 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ],
         ),
         content: const Text(
-          'Haftalık ligler ve sıralama yarışları çok yakında açılıyor!\n\nŞimdiden adanı geliştirip prestijini artır, Skill Ağacında ustalaşarak en yüksek puanları topla ve ilk sezona damganı vur!',
+          'Haftalık ligler ve sıralama yarışları çok yakında açılıyor!\n\nŞimdiden Kadim Hazine Mahzenindeki emanetleri açarak prestijini artır, lig basamaklarını tırman ve ilk sezona damganı vur!',
           style: TextStyle(color: Colors.white70, fontSize: 14),
         ),
         actions: [
@@ -88,6 +89,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameProvider);
+    final vaultState = ref.watch(vaultProvider);
     final totalTickets = gameState.regenTickets + gameState.bonusTickets;
 
     return Scaffold(
@@ -113,6 +115,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       _buildResourceBadge(Icons.monetization_on, '${gameState.goldCoins}', Colors.amber),
                       const SizedBox(width: 6),
                       _buildResourceBadge(Icons.monetization_on_outlined, '${gameState.silverCoins}', Colors.grey.shade300),
+                      const SizedBox(width: 6),
+                      _buildResourceBadge(Icons.military_tech_rounded, '${vaultState.totalPrestige} P (${vaultState.leagueName})', Colors.purpleAccent),
                     ],
                   ),
                 ),
@@ -296,13 +300,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildMenuButton(
-                        title: 'Adalar',
-                        icon: '🏝️',
-                        color: Colors.cyanAccent,
+                        title: 'Mahzen',
+                        icon: '🏛️',
+                        color: Colors.amberAccent,
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const IslandScreen()),
+                            MaterialPageRoute(builder: (context) => const VaultScreen()),
                           );
                         },
                       ),

@@ -331,6 +331,7 @@ class GameNotifier extends StateNotifier<GameState> {
           col: c,
           type: type,
           isFalling: false,
+          fallDistance: 1,
         );
       }
     }
@@ -637,7 +638,7 @@ class GameNotifier extends StateNotifier<GameState> {
       updatedBars[tile.type] = min(maxBar, currentVal + baseCharge);
     }
 
-    // 1. Patlayan taşları tahtadan sil (boşlukların görünmesi için)
+    // 1. Patlayan kutuları tahtadan sil
     List<List<TileModel?>> grid = _cloneGrid(state.grid);
     for (var m in matches) {
       if (m.row < state.gridRows && m.col < state.gridCols) {
@@ -651,13 +652,16 @@ class GameNotifier extends StateNotifier<GameState> {
       skillBars: updatedBars,
     );
 
-    await Future.delayed(const Duration(milliseconds: 450));
+    // Boşluk bekleme süresi optimize edildi (Siyah boşlukta takılmadan hemen düşüş başlar)
+    await Future.delayed(const Duration(milliseconds: 120));
 
-    // 2. Taşların süzülerek inmesi
+    // 2. Taşların düşürülmesi
     await _applyGravityAndRefill(grid);
   }
 
   Future<void> _applyGravityAndRefill(List<List<TileModel?>> grid) async {
+    final int dropSessionId = DateTime.now().microsecondsSinceEpoch;
+
     for (int c = 0; c < state.gridCols; c++) {
       int emptySpaces = 0;
       for (int r = state.gridRows - 1; r >= 0; r--) {
@@ -665,41 +669,42 @@ class GameNotifier extends StateNotifier<GameState> {
           emptySpaces++;
         } else if (emptySpaces > 0) {
           TileModel original = grid[r][c]!;
-          // Aşağı kayan mevcut taş: Yeni hücrede animasyonu tetiklemek için ID yenilenir ve isFalling: true verilir
+          // Konumu değişen taşın ID'si session id ile yenilenerek AnimatedSwitcher'ın tetiklenmesi sağlanır
           grid[r + emptySpaces][c] = original.copyWith(
-            id: 'fall_${original.id}_${DateTime.now().microsecondsSinceEpoch}',
+            id: 'fall_${original.type.name}_${r + emptySpaces}_${c}_$dropSessionId',
             row: r + emptySpaces,
             isFalling: true,
+            fallDistance: emptySpaces,
           );
           grid[r][c] = null;
         } else {
-          // Yerinde sabit duran taşın düşme bayrağı kapatılır
           grid[r][c] = grid[r][c]!.copyWith(isFalling: false);
         }
       }
 
-      // En tepeden boşluklara yeni üretilen taşlar
+      // Tepeden boşluklara yeni giren taşlar
       for (int i = 0; i < emptySpaces; i++) {
         final type = TileType.values[_random.nextInt(TileType.values.length)];
         grid[i][c] = TileModel(
-          id: 'tile_${i}_${c}_${DateTime.now().microsecondsSinceEpoch}',
+          id: 'spawn_${type.name}_${i}_${c}_$dropSessionId',
           row: i,
           col: c,
           type: type,
           isFalling: true,
+          fallDistance: emptySpaces + (emptySpaces - i),
         );
       }
     }
 
     state = state.copyWith(grid: grid);
 
-    // Taşların süzülüp yaylanarak oturmasını bekleme süresi
-    await Future.delayed(const Duration(milliseconds: 850));
+    // Salınımın tamamlanması için bekleme süresi
+    await Future.delayed(const Duration(milliseconds: 550));
 
     // 3. Kombo kontrolü
     final cascadeMatches = _findMatches(grid);
     if (cascadeMatches.isNotEmpty) {
-      await Future.delayed(const Duration(milliseconds: 350));
+      await Future.delayed(const Duration(milliseconds: 180));
       await _processMatches(cascadeMatches);
     } else {
       state = state.copyWith(isProcessingBoard: false);

@@ -35,6 +35,7 @@ dev_dependencies:
 
   # Native Açılış Ekranı (Splash Screen) Oluşturucu
   flutter_native_splash: ^2.4.1
+  gh_pages: ^0.1.1
 
 # Uygulama İkon Yapılandırması
 flutter_launcher_icons:

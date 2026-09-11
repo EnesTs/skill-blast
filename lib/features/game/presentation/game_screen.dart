@@ -115,7 +115,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final gameState = ref.read(gameProvider);
     final notifier = ref.read(gameProvider.notifier);
 
-    // Kırmızı, Yeşil ve Mor skiller için hedef taşa tıklandığı an animasyonu patlat
     if (gameState.activeSkillMode == SkillMode.redBomb) {
       _triggerSkillBurst(TileType.red);
       _triggerTileColorGlow(Colors.redAccent);
@@ -464,7 +463,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 if (isReady) {
                                   AudioService.playSkill();
 
-                                  // Yalnızca anında tetiklenen Mavi ve Sarı buton anında patlar
                                   if (type == TileType.blue) {
                                     _triggerSkillBurst(TileType.blue);
                                     _triggerPlusMovesEffect();
@@ -621,104 +619,75 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 final isShaking = (_isShakingBomb && isInsideBombZone) || isHighlighted;
                                 final tileGradients = _getTileGradients(tile.type);
 
-                                return AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 650),
-                                  switchInCurve: Curves.bounceOut,
-                                  layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                                    return Stack(
-                                      fit: StackFit.expand,
-                                      children: <Widget>[
-                                        ...previousChildren,
-                                        if (currentChild != null) currentChild,
-                                      ],
-                                    );
-                                  },
-                                  transitionBuilder: (child, animation) {
-                                    if (child.key != ValueKey(tile.id)) {
-                                      return const SizedBox.shrink();
-                                    }
-
-                                    if (tile.isFalling) {
-                                      return SlideTransition(
-                                        position: Tween<Offset>(
-                                          begin: const Offset(0.0, -1.0),
-                                          end: Offset.zero,
-                                        ).animate(animation),
-                                        child: child,
-                                      );
-                                    }
-
-                                    return child;
-                                  },
-                                  child: SizedBox.expand(
-                                    key: ValueKey(tile.id),
-                                    child: GestureDetector(
-                                      onTap: () => _handleTileClickWithSkill(tile),
-                                      child: AnimatedContainer(
-                                        duration: const Duration(milliseconds: 150),
-                                        transform: Matrix4.translationValues(
-                                            isShaking ? (Random().nextDouble() * 8 - 4) : 0,
-                                            isShaking ? (Random().nextDouble() * 8 - 4) : 0,
-                                            0),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: isHighlighted
-                                                ? [Colors.purpleAccent, Colors.deepPurple]
-                                                : (isInsideBombZone
-                                                    ? [Colors.redAccent, Colors.red.shade900]
-                                                    : tileGradients),
-                                          ),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: isHighlighted
-                                              ? Border.all(color: Colors.amberAccent, width: 3)
-                                              : (isSelected
-                                                  ? Border.all(color: Colors.white, width: 3)
-                                                  : (isInsideBombZone
-                                                      ? Border.all(color: Colors.yellow, width: 2)
-                                                      : Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1))),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: isHighlighted
-                                                  ? Colors.purple.withValues(alpha: 0.9)
-                                                  : (isSelected
-                                                      ? tile.type.color.withValues(alpha: 0.9)
-                                                      : tile.type.color.withValues(alpha: 0.3)),
-                                              blurRadius: isSelected || isHighlighted ? 12 : 4,
-                                              spreadRadius: isSelected || isHighlighted ? 2 : 0,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
+                                return _FallingTileWidget(
+                                  key: ValueKey('${tile.row}_${tile.col}_${tile.id}'),
+                                  tile: tile,
+                                  child: GestureDetector(
+                                    onTap: () => _handleTileClickWithSkill(tile),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 150),
+                                      transform: Matrix4.translationValues(
+                                          isShaking ? (Random().nextDouble() * 8 - 4) : 0,
+                                          isShaking ? (Random().nextDouble() * 8 - 4) : 0,
+                                          0),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: isHighlighted
+                                              ? [Colors.purpleAccent, Colors.deepPurple]
+                                              : (isInsideBombZone
+                                                  ? [Colors.redAccent, Colors.red.shade900]
+                                                  : tileGradients),
                                         ),
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            Positioned(
-                                              top: 2,
-                                              left: 4,
-                                              right: 4,
-                                              child: Container(
-                                                height: 6,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withValues(alpha: 0.35),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: isHighlighted
+                                            ? Border.all(color: Colors.amberAccent, width: 3)
+                                            : (isSelected
+                                                ? Border.all(color: Colors.white, width: 3)
+                                                : (isInsideBombZone
+                                                    ? Border.all(color: Colors.yellow, width: 2)
+                                                    : Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1))),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: isHighlighted
+                                                ? Colors.purple.withValues(alpha: 0.9)
+                                                : (isSelected
+                                                    ? tile.type.color.withValues(alpha: 0.9)
+                                                    : tile.type.color.withValues(alpha: 0.3)),
+                                            blurRadius: isSelected || isHighlighted ? 12 : 4,
+                                            spreadRadius: isSelected || isHighlighted ? 2 : 0,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Positioned(
+                                            top: 2,
+                                            left: 4,
+                                            right: 4,
+                                            child: Container(
+                                              height: 6,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.35),
+                                                borderRadius: BorderRadius.circular(4),
                                               ),
                                             ),
-                                            Icon(
-                                              _getTileInnerSymbol(tile.type),
-                                              color: Colors.white.withValues(alpha: 0.4),
-                                              size: 20,
-                                            ),
-                                            if (_bombTargetTile?.id == tile.id)
-                                              const Icon(Icons.local_fire_department,
-                                                  color: Colors.amber, size: 28),
-                                            if (isHighlighted)
-                                              const Icon(Icons.auto_awesome,
-                                              color: Colors.amberAccent, size: 22),
-                                          ],
-                                        ),
+                                          ),
+                                          Icon(
+                                            _getTileInnerSymbol(tile.type),
+                                            color: Colors.white.withValues(alpha: 0.4),
+                                            size: 20,
+                                          ),
+                                          if (_bombTargetTile?.id == tile.id)
+                                            const Icon(Icons.local_fire_department,
+                                                color: Colors.amber, size: 28),
+                                          if (isHighlighted)
+                                            const Icon(Icons.auto_awesome,
+                                                color: Colors.amberAccent, size: 22),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -849,7 +818,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ),
           ),
 
-          // TAM EKRAN PARÇACIK VE TEMATİK ANİMASYON KATMANI
           if (_activeScreenEffect != null)
             Positioned.fill(
               child: SkillEffectsOverlay(
@@ -1006,6 +974,87 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Düşen ve kayan her taşa özel, sağa-sola salınımlı bağımsız düşüş widget'ı
+class _FallingTileWidget extends StatefulWidget {
+  final TileModel tile;
+  final Widget child;
+
+  const _FallingTileWidget({
+    super.key,
+    required this.tile,
+    required this.child,
+  });
+
+  @override
+  State<_FallingTileWidget> createState() => _FallingTileWidgetState();
+}
+
+class _FallingTileWidgetState extends State<_FallingTileWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fallCurve;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+
+    _fallCurve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
+
+    if (widget.tile.isFalling) {
+      _controller.forward(from: 0.0);
+    } else {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _FallingTileWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.tile.isFalling &&
+        (widget.tile.id != oldWidget.tile.id || widget.tile.row != oldWidget.tile.row)) {
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.tile.isFalling) {
+      return widget.child;
+    }
+
+    return AnimatedBuilder(
+      animation: _fallCurve,
+      builder: (context, child) {
+        double t = _fallCurve.value;
+        // Dikey düşüş mesafesi (Hücre yüksekliğine göre yukarıdan kayış)
+        double verticalOffset = -60.0 * widget.tile.fallDistance.clamp(1, 7) * (1.0 - t);
+        
+        // Hissedilir sağa-sola sallanma/salınım hareketi (genlik 12.0 birime çıkarıldı)
+        double sway = sin(t * pi * 3.5) * (1.0 - t) * 12.0;
+
+        return Transform.translate(
+          offset: Offset(sway, verticalOffset),
+          child: child,
+        );
+      },
+      child: widget.child,
     );
   }
 }

@@ -28,7 +28,8 @@ class TileModel {
   final int row;
   final int col;
   final TileType type;
-  final bool isFalling; // Yalnızca en tepeden doğan yeni taşlar için
+  final bool isFalling;
+  final int fallDistance; // Kaç kare yukarıdan düşeceğini tutar
 
   TileModel({
     required this.id,
@@ -36,6 +37,7 @@ class TileModel {
     required this.col,
     required this.type,
     this.isFalling = false,
+    this.fallDistance = 1,
   });
 
   TileModel copyWith({
@@ -44,6 +46,7 @@ class TileModel {
     int? col,
     TileType? type,
     bool? isFalling,
+    int? fallDistance,
   }) {
     return TileModel(
       id: id ?? this.id,
@@ -51,6 +54,7 @@ class TileModel {
       col: col ?? this.col,
       type: type ?? this.type,
       isFalling: isFalling ?? this.isFalling,
+      fallDistance: fallDistance ?? this.fallDistance,
     );
   }
 }
