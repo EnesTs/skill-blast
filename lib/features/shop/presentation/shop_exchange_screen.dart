@@ -167,16 +167,14 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
   }
 
   Widget _buildShopTab(BuildContext context, GameState gameState, GameNotifier notifier) {
-    final int legendaryTier = gameState.legendaryPackageTier;
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (legendaryTier < 3) ...[
-          _buildLegendaryPackageCard(gameState, notifier),
-          const SizedBox(height: 24),
-        ],
+        // 1. EFSANEVİ PAKETLER VİTRİNİ (HER ZAMAN GÖRÜNÜR)
+        _buildLegendaryPackageCard(gameState, notifier),
+        const SizedBox(height: 24),
 
+        // 2. BİLET VE HAK SATIŞLARI
         const Text('🎟️ BİLET & HAK SATIŞLARI',
             style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 10),
@@ -208,6 +206,7 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
         ),
         const SizedBox(height: 20),
 
+        // 3. ALTIN MAĞAZASI
         const Text('🟡 ALTIN MAĞAZASI (ADA & SON SEVİYE SKİLL İÇİN)',
             style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 10),
@@ -239,6 +238,7 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
         ),
         const SizedBox(height: 20),
 
+        // 4. GÜMÜŞ MAĞAZASI
         const Text('⚪ GÜMÜŞ MAĞAZASI (SKİLL YÜKSELTMELERİ İÇİN)',
             style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 10),
@@ -271,8 +271,10 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
     );
   }
 
+  // --- EFSANEVİ PAKET KARTI (KAYBOLMAYAN & MAKS SEVİYE BİLGİLENDİRMELİ) ---
   Widget _buildLegendaryPackageCard(GameState gameState, GameNotifier notifier) {
     final int currentTier = gameState.legendaryPackageTier;
+    final bool isMax = currentTier >= 3;
 
     String title = '';
     String itemsText = '';
@@ -282,26 +284,31 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
     int silver = 0;
 
     if (currentTier == 0) {
-      title = 'EFSANEVİ BAŞLANGIÇ PAKETİ';
+      title = 'EFSANEVİ BAŞLANGIÇ PAKETİ (1/3)';
       itemsText = '5 Bilet + 50 Altın + 500 Gümüş';
       priceText = '₺150.00';
       tickets = 5;
       gold = 50;
       silver = 500;
     } else if (currentTier == 1) {
-      title = 'EFSANEVİ ORTA SEVİYE PAKET';
+      title = 'EFSANEVİ ORTA SEVİYE PAKET (2/3)';
       itemsText = '10 Bilet + 100 Altın + 1.000 Gümüş';
       priceText = '₺270.00';
       tickets = 10;
       gold = 100;
       silver = 1000;
     } else if (currentTier == 2) {
-      title = 'EFSANEVİ PREMIUM PAKET';
+      title = 'EFSANEVİ PREMIUM PAKET (3/3)';
       itemsText = '15 Bilet + 200 Altın + 2.000 Gümüş';
       priceText = '₺450.00';
       tickets = 15;
       gold = 200;
       silver = 2000;
+    } else {
+      // 3 veya daha büyükse oyuncunun tüm aşamaları tamamladığını gösterir
+      title = 'EFSANEVİ PAKETLER';
+      itemsText = 'Tüm kademeler tamamlandı! Mahzen ve yeteneklerinde gücünü göster.';
+      priceText = 'TAMAMLANDI';
     }
 
     return Container(
@@ -334,18 +341,27 @@ class _ShopAndExchangeScreenState extends ConsumerState<ShopAndExchangeScreen>
               ],
             ),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
+              backgroundColor: isMax ? Colors.white24 : Colors.amber,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            onPressed: () {
-              notifier.buyPackage(addTickets: tickets, addGold: gold, addSilver: silver);
-              notifier.incrementLegendaryTier();
-              _showPurchaseSuccess(context, title);
-            },
-            child: Text(priceText,
-                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            onPressed: isMax
+                ? null
+                : () {
+                    notifier.buyPackage(addTickets: tickets, addGold: gold, addSilver: silver);
+                    notifier.incrementLegendaryTier();
+                    _showPurchaseSuccess(context, title);
+                  },
+            child: Text(
+              priceText,
+              style: TextStyle(
+                color: isMax ? Colors.white54 : Colors.black,
+                fontWeight: FontWeight.bold,
+                fontSize: isMax ? 11 : 14,
+              ),
+            ),
           )
         ],
       ),

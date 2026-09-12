@@ -58,66 +58,159 @@ class _VaultScreenState extends ConsumerState<VaultScreen>
     super.dispose();
   }
 
-  void _showSeasonPicker(BuildContext context) {
+  // --- SAĞ ALTTAKİ BUTONA BASILDIĞINDA AÇILAN GELİŞMİŞ ATMOSFER MENÜSÜ ---
+  void _showAtmosphereSettingsModal(BuildContext context) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF0F172A),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Mevsimi Belirle',
-                style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSeasonBtn(0, '🌸', 'İlkbahar\n(Çiçek)'),
-                  _buildSeasonBtn(1, '☀️', 'Yaz\n(Güneş Işığı)'),
-                  _buildSeasonBtn(2, '🍁', 'Sonbahar\n(Yaprak)'),
-                  _buildSeasonBtn(3, '❄️', 'Kış\n(Kar Yağışı)'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Atmosfer & Zaman Ayarı',
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 1. GECE / GÜNDÜZ SEÇİMİ
+                  const Text('GÖKYÜZÜ VE ZAMAN',
+                      style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTimeOptionBtn(
+                          title: 'Gündüz',
+                          emoji: '☀️',
+                          isSelected: !_isNight,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _isNight = false);
+                            setModalState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildTimeOptionBtn(
+                          title: 'Gece',
+                          emoji: '🌙',
+                          isSelected: _isNight,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _isNight = true);
+                            setModalState(() {});
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 2. MEVSİM SEÇİMİ
+                  const Text('MEVSİM HAVA DURUMU',
+                      style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSeasonTile(0, '🌸', 'İlkbahar', setModalState),
+                      _buildSeasonTile(1, '☀️', 'Yaz', setModalState),
+                      _buildSeasonTile(2, '🍁', 'Sonbahar', setModalState),
+                      _buildSeasonTile(3, '❄️', 'Kış', setModalState),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
-              const SizedBox(height: 10),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildSeasonBtn(int index, String emoji, String title) {
+  Widget _buildTimeOptionBtn({
+    required String title,
+    required String emoji,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.amber.withValues(alpha: 0.25) : Colors.white10,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: isSelected ? Colors.amber : Colors.white24, width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.amber : Colors.white70,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeasonTile(int index, String emoji, String title, StateSetter setModalState) {
     final bool isSelected = _selectedSeason == index;
     return InkWell(
       onTap: () {
-        HapticFeedback.lightImpact();
+        HapticFeedback.selectionClick();
         setState(() => _selectedSeason = index);
-        Navigator.pop(context);
+        setModalState(() {});
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        width: 72,
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.amber.withValues(alpha: 0.2) : Colors.white10,
+          color: isSelected ? Colors.amber.withValues(alpha: 0.22) : Colors.white10,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: isSelected ? Colors.amber : Colors.white24, width: 1.5),
         ),
         child: Column(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 26)),
-            const SizedBox(height: 6),
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 4),
             Text(
               title,
-              textAlign: TextAlign.center,
               style: TextStyle(
                 color: isSelected ? Colors.amber : Colors.white70,
                 fontSize: 10,
@@ -267,6 +360,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen>
             ),
           ),
 
+          // ÜST HUD BARI (SABİT)
           Positioned(
             top: 0,
             left: 0,
@@ -274,6 +368,14 @@ class _VaultScreenState extends ConsumerState<VaultScreen>
             child: _buildTopHUD(context, gameState, vaultState),
           ),
 
+          // SAĞ ALT KÖŞEDE SENİNLE AŞAĞI YUKARI GELEN YÜZEN ATMOSFER BUTONU
+          Positioned(
+            right: 18,
+            bottom: 86,
+            child: _buildFloatingAtmosphereButton(),
+          ),
+
+          // ALT TOPLAMA BUTONU (SABİT)
           Positioned(
             left: 16,
             right: 16,
@@ -289,6 +391,60 @@ class _VaultScreenState extends ConsumerState<VaultScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // --- SAĞ ALTTTAKİ YÜZEN ATMOSFER / HAVA DURUMU BUTONU ---
+  Widget _buildFloatingAtmosphereButton() {
+    return GestureDetector(
+      onTap: () => _showAtmosphereSettingsModal(context),
+      child: AnimatedBuilder(
+        animation: _ambientController,
+        builder: (context, child) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.90),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.amber.withValues(alpha: 0.6 + _ambientController.value * 0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.amber.withValues(alpha: 0.2 + _ambientController.value * 0.2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${_getSeasonEmoji()} ${_isNight ? '🌙' : '☀️'}',
+                  style: const TextStyle(fontSize: 18),
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'Hava',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const Icon(Icons.tune_rounded, color: Colors.amber, size: 14),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -325,6 +481,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen>
             ),
           ),
 
+          // GÜNEŞ VEYA AY
           Positioned(
             top: 110,
             right: 32,
@@ -355,59 +512,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen>
             ),
           ),
 
-          Positioned(
-            top: 110,
-            left: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _isNight = !_isNight);
-                    },
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _isNight ? Colors.indigo.shade900 : Colors.amber.shade700,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(_isNight ? '🌙 Gece' : '☀️ Gündüz', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () => _showSeasonPicker(context),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white12,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(_getSeasonEmoji(), style: const TextStyle(fontSize: 14)),
-                          const SizedBox(width: 4),
-                          const Text('Mevsim', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                          const Icon(Icons.keyboard_arrow_down, color: Colors.white54, size: 16),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
+          // MANZARA ÇİZİMİ (EV, ÇİTLER, KUYU)
           Positioned(
             bottom: 0,
             left: 0,
@@ -610,7 +715,6 @@ class _VignetteChamberFloor extends StatelessWidget {
       width: double.infinity,
       child: Stack(
         children: [
-          // 1. ODA MİMARİSİ VE VEKTÖREL KABARTMA DUVAR
           Positioned(
             left: 48,
             right: 12,
@@ -634,7 +738,6 @@ class _VignetteChamberFloor extends StatelessWidget {
             ),
           ),
 
-          // 2. MEKANIN İÇİNDEKİ NESNELER
           Positioned(
             left: 56,
             right: 20,
@@ -646,7 +749,6 @@ class _VignetteChamberFloor extends StatelessWidget {
             ),
           ),
 
-          // 3. HAVADA SÜZÜLEN IŞIK PARÇACIKLARI
           if (!locked)
             Positioned(
               left: 55,
@@ -669,7 +771,6 @@ class _VignetteChamberFloor extends StatelessWidget {
               ),
             ),
 
-          // 4. KESİNTİSİZ SOL MERDİVEN ŞAFTI
           Positioned(
             left: 3,
             top: 0,
@@ -688,7 +789,6 @@ class _VignetteChamberFloor extends StatelessWidget {
             ),
           ),
 
-          // 5. KAT ROZETİ
           Positioned(
             left: 13,
             top: 16,
@@ -712,7 +812,6 @@ class _VignetteChamberFloor extends StatelessWidget {
             ),
           ),
 
-          // 6. KAT BAŞLIĞI
           Positioned(
             left: 82,
             top: 17,
@@ -735,7 +834,6 @@ class _VignetteChamberFloor extends StatelessWidget {
             ),
           ),
 
-          // 7. SEVİYE ROZETİ
           Positioned(
             right: 28,
             top: 17,
@@ -757,7 +855,6 @@ class _VignetteChamberFloor extends StatelessWidget {
             ),
           ),
 
-          // 8. KİLİTLİ ODA KARARTMASI
           if (locked)
             Positioned.fill(
               left: 48,
@@ -783,7 +880,6 @@ class _VignetteChamberFloor extends StatelessWidget {
               ),
             ),
 
-          // 9. ALT İNTERAKTİF SANDIK & GELİŞTİRME BUTONU
           Positioned(
             left: 74,
             right: 25,
@@ -876,7 +972,6 @@ class _VignetteChamberFloor extends StatelessWidget {
 
     switch (floorIndex) {
       case 1:
-        // 1. Kat: Depo Odası - Variller, sandıklar ve örs
         return Stack(
           alignment: Alignment.center,
           children: [
@@ -912,7 +1007,6 @@ class _VignetteChamberFloor extends StatelessWidget {
         );
 
       case 2:
-        // 2. Kat: Yaşam Odası - Şömine ateşi, yemek masası
         return Stack(
           alignment: Alignment.center,
           children: [
@@ -946,13 +1040,11 @@ class _VignetteChamberFloor extends StatelessWidget {
         );
 
       case 3:
-        // 3. Kat: Hazine Odası - ARKA DUVARDAKİ VEKTÖREL MUHAFIZ KABARTMASI İLE UYUMLU SUNAK
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Sunak masasının sağ dibinde duran altın hazine yığını
             Positioned(
-              right: size3GoldX,
+              right: 20.0,
               bottom: 24,
               child: Row(
                 children: [
@@ -962,13 +1054,11 @@ class _VignetteChamberFloor extends StatelessWidget {
                 ],
               ),
             ),
-            // Sunak masasının sol dibindeki antik demir meşale
             Positioned(
               left: 24,
               bottom: 24,
               child: Icon(Icons.fireplace_rounded, size: 22, color: Colors.orange.shade800),
             ),
-            // Orta Sunak Masasında Kor Yanan Ejderha Kadehi
             Positioned(
               bottom: 44,
               child: Icon(relic.icon, size: 26, color: itemColor),
@@ -977,7 +1067,6 @@ class _VignetteChamberFloor extends StatelessWidget {
         );
 
       case 4:
-        // 4. Kat: Atölye Odası - Tezgah, aletler ve açık büyü kitabı
         return Stack(
           alignment: Alignment.center,
           children: [
@@ -1011,7 +1100,6 @@ class _VignetteChamberFloor extends StatelessWidget {
         );
 
       case 5:
-        // 5. Kat: Gizli Su Tapınağı - Sütunlar, Havuz ve Süzülen Taç
         return Stack(
           alignment: Alignment.center,
           children: [
@@ -1045,8 +1133,6 @@ class _VignetteChamberFloor extends StatelessWidget {
     }
   }
 
-  double get size3GoldX => 20.0;
-
   String _floorName(int index) {
     switch (index) {
       case 1: return '1. KAT  •  DEPO ODASI';
@@ -1059,7 +1145,6 @@ class _VignetteChamberFloor extends StatelessWidget {
   }
 }
 
-/// DUVAR, NİŞLER, KEMERLER VE SAF VEKTÖREL MUHAFIZ KABARTMASI ÇİZİCİ
 class _ArchitecturalBackdropPainter extends CustomPainter {
   final int floorIndex;
   final bool locked;
@@ -1077,7 +1162,6 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final room = Rect.fromLTWH(0, 0, size.width, size.height);
 
-    // Koyu Taş Duvar
     final wallPaint = Paint()
       ..shader = RadialGradient(
         center: const Alignment(0.0, -0.2),
@@ -1126,14 +1210,12 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
       canvas.drawLine(Offset(x, floorTop), Offset(x - 10, size.height), stoneLine);
     }
 
-    // Halı
     if (!locked && floorIndex <= 3) {
       final carpetRect = Rect.fromLTWH(size.width * .20, floorTop + 5, size.width * .56, 32);
       canvas.drawRRect(RRect.fromRectAndRadius(carpetRect, const Radius.circular(4)), Paint()..color = const Color(0xFF6B1817));
       canvas.drawRRect(RRect.fromRectAndRadius(carpetRect.deflate(3), const Radius.circular(2)), Paint()..color = const Color(0xFFB57038)..style = PaintingStyle.stroke..strokeWidth = 1.2);
     }
 
-    // KATLARA ÖZEL SAHNE YAPILARI
     switch (floorIndex) {
       case 1:
         _drawWallShelf(canvas, Offset(size.width * .16, size.height * .24), 70, 68);
@@ -1148,7 +1230,6 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
         break;
 
       case 3:
-        // 3. KAT: ARKA DUVARDA SAF VEKTÖREL TAŞ MUHAFIZ KABARTMASI & NİŞ
         _drawVectorGuardianNiche(canvas, size);
         final pedestal = Paint()..color = const Color(0xFF4A2E1F);
         canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(size.width * 0.50, size.height * 0.70), width: 50, height: 18), const Radius.circular(4)), pedestal);
@@ -1173,11 +1254,9 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
     canvas.drawRect(room, Paint()..color = const Color(0xFF422C1D)..style = PaintingStyle.stroke..strokeWidth = 4);
   }
 
-  // 3. KAT İÇİN ÖZEL VEKTÖREL TAŞ MUHAFIZ VE GÖMME NİŞ ÇİZİMİ
   void _drawVectorGuardianNiche(Canvas canvas, Size size) {
     final cx = size.width * 0.50;
 
-    // 1. Duvarda Gömme Taş Kemer (Niş)
     final nicheRect = Rect.fromLTWH(cx - 36, size.height * 0.16, 72, size.height * 0.52);
     final nichePaint = Paint()
       ..shader = LinearGradient(
@@ -1189,7 +1268,6 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
         ],
       ).createShader(nicheRect);
 
-    // Kemerli üst form
     final nichePath = Path()
       ..moveTo(cx - 36, size.height * 0.68)
       ..lineTo(cx - 36, size.height * 0.28)
@@ -1198,18 +1276,15 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
       ..close();
     canvas.drawPath(nichePath, nichePaint);
 
-    // Kemer taş çerçevesi
     final archBorder = Paint()
       ..color = const Color(0xFF422E22)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
     canvas.drawPath(nichePath, archBorder);
 
-    // 2. Taş Muhafız Kabartması (Bas-Relief Silüeti)
     final stoneGuardianPaint = Paint()
       ..color = locked ? const Color(0xFF26201B) : const Color(0xFF3E362E);
 
-    // Miğfer & Baş
     final headPath = Path()
       ..moveTo(cx - 9, size.height * 0.29)
       ..lineTo(cx, size.height * 0.21)
@@ -1219,7 +1294,6 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
       ..close();
     canvas.drawPath(headPath, stoneGuardianPaint);
 
-    // Miğfer boynuz / taç kanatları
     final hornPath = Path()
       ..moveTo(cx - 13, size.height * 0.23)
       ..lineTo(cx - 7, size.height * 0.27)
@@ -1234,7 +1308,6 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
       ..close();
     canvas.drawPath(hornPathRight, stoneGuardianPaint);
 
-    // Omuzluklar ve Gövde Zırhı
     final bodyPath = Path()
       ..moveTo(cx - 16, size.height * 0.36)
       ..lineTo(cx + 16, size.height * 0.36)
@@ -1243,16 +1316,12 @@ class _ArchitecturalBackdropPainter extends CustomPainter {
       ..close();
     canvas.drawPath(bodyPath, stoneGuardianPaint);
 
-    // Dikey Antik Taş Kılıç (Kabza ve Bıçak)
     final bladePaint = Paint()
       ..color = locked ? const Color(0xFF332B25) : const Color(0xFF5A524A)
       ..strokeWidth = 2.5;
     canvas.drawLine(Offset(cx, size.height * 0.34), Offset(cx, size.height * 0.65), bladePaint);
-
-    // Kılıç Çapraz Balçak (Guard)
     canvas.drawLine(Offset(cx - 7, size.height * 0.40), Offset(cx + 7, size.height * 0.40), bladePaint);
 
-    // Kırmızı Sancaklar (Nişin iki yanından sarkan kızıl flamalar)
     final bannerPaint = Paint()..color = const Color(0xFF7F1D1D);
     final bLeft = Path()
       ..moveTo(cx - 40, size.height * 0.22)
