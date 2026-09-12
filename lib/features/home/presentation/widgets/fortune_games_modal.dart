@@ -77,7 +77,6 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
       duration: const Duration(seconds: 4),
     );
 
-    // Aşağıya kadar inişin net izlenmesi için ideal 1.6 saniyelik süre
     _winAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
@@ -126,7 +125,7 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
         break;
 
       case 1:
-        // 2. KASA: İKİ ÇAPRAZDAN BİRBİRİNİ KESEN ŞERİT ŞELALESİ (SOL ÜST->SAĞ ALT & SAĞ ÜST->SOL ALT)
+        // 2. KASA: İKİ ÇAPRAZDAN BİRBİRİNİ KESEN ŞERİT ŞELALESİ
         for (int i = 0; i < 46; i++) {
           bool fromLeftStream = i % 2 == 0;
           double startX = fromLeftStream 
@@ -140,29 +139,29 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
             startXRatio: startX,
             startYRatio: -0.15 - (_random.nextDouble() * 0.25),
             vx: vx,
-            vy: 680.0 + _random.nextDouble() * 220.0, // Ekranın en altına kadar hızla iner
+            vy: 680.0 + _random.nextDouble() * 220.0,
             color: [Colors.purpleAccent, Colors.pinkAccent, Colors.deepPurpleAccent][_random.nextInt(3)],
             emoji: ['💎', '👑', '🎁', '✨', '🟣'][_random.nextInt(5)],
-            size: 28.0 + _random.nextDouble() * 8.0, // Büyük ve çok net
-            delay: (i / 46.0) * 0.35, // Sıralı şerit akışı
+            size: 28.0 + _random.nextDouble() * 8.0,
+            delay: (i / 46.0) * 0.35,
           ));
         }
         break;
 
       case 2:
-        // 3. ZAR: EKRANI KAPLAYAN 5 KULVARLI DİK ŞELALE (TAVANDAN TABANA NET DÖKÜLME)
+        // 3. ZAR: EKRANI KAPLAYAN 5 KULVARLI DİK ŞELALE
         for (int i = 0; i < 45; i++) {
-          int lane = i % 5; // 5 farklı kulvardan dökülür
+          int lane = i % 5;
           double laneX = 0.10 + (lane * 0.20) + ((_random.nextDouble() - 0.5) * 0.06);
 
           list.add(_ThematicWinParticle(
             startXRatio: laneX,
             startYRatio: -0.15 - (_random.nextDouble() * 0.30),
-            vx: (_random.nextDouble() - 0.5) * 20.0, // Sapmasız, dik iniş
-            vy: 720.0 + _random.nextDouble() * 240.0, // En alt tabana kadar kesintisiz iniş
+            vx: (_random.nextDouble() - 0.5) * 20.0,
+            vy: 720.0 + _random.nextDouble() * 240.0,
             color: [Colors.redAccent, Colors.amber, Colors.orange][_random.nextInt(3)],
             emoji: ['🎲', '🔥', '🏆', '🎯', '♦️'][_random.nextInt(5)],
-            size: 30.0 + _random.nextDouble() * 6.0, // Çok net iri zarlar
+            size: 30.0 + _random.nextDouble() * 6.0,
             delay: _random.nextDouble() * 0.30,
           ));
         }
@@ -322,7 +321,6 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
               ),
             ),
 
-            // EN DİBE KADAR İNEN KESİNTİSİZ KAZANÇ ŞERİTLERİ KATMANI
             if (_showWinOverlay)
               Positioned.fill(
                 child: IgnorePointer(
@@ -703,7 +701,7 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
                     } else if (outcome == 1) {
                       notifier.buyPackage(addGold: 30);
                       msg = '🌟 Büyük Ödül! 30 Altın Çıktı!\nHarcanan: 10 Altın | Kazanılan: 30 (Net: +20 Altın)';
-                      _triggerWinAnimation(1); // Çift çapraz şerit şelalesi
+                      _triggerWinAnimation(1);
                     } else {
                       notifier.buyPackage(addGold: 10);
                       msg = '✨ Amorti! 10 Altın Geldi.\nHarcanan: 10 Altın | Kazanılan: 10 (Net: 0 Altın)';
@@ -831,7 +829,7 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
     } else if (won) {
       notifier.buyPackage(addSilver: cost * 2);
       msg = '🎉 Doğru Tahmin!\nHarcanan: 50 Gümüş | Kazanılan: 100 (Net: +50 Gümüş)';
-      _triggerWinAnimation(2); // 5 Kulvarlı net dikey perde şelalesi
+      _triggerWinAnimation(2);
     } else {
       msg = '💥 Yanlış Tahmin!\nHarcanan: 50 Gümüş | Kazanılan: 0 (Net: -50 Gümüş)';
     }
@@ -873,10 +871,12 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
     const int entryCost = 100;
     bool isLocked = _showWinOverlay;
 
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20.0, 10.0, 20.0, 30.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -888,64 +888,71 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
             child: Text(
               _minesStatusText,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             _minesGameActive ? 'Biriken Ödül: $_minesCurrentReward Gümüş' : 'Giriş Ücreti: $entryCost Gümüş',
-            style: const TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.w900),
+            style: const TextStyle(color: Colors.amber, fontSize: 15, fontWeight: FontWeight.w900),
           ),
-          const SizedBox(height: 15),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: 9,
-            itemBuilder: (context, index) {
-              bool isRevealed = _revealedTiles[index];
-              bool isMine = _mineLocations[index];
+          const SizedBox(height: 10),
 
-              return InkWell(
-                onTap: _minesGameActive && !isRevealed && !isLocked ? () => _revealMinesTile(index, notifier) : null,
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isRevealed
-                        ? (isMine ? Colors.red.shade900 : Colors.green.shade800)
-                        : Colors.black.withOpacity(0.55),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isRevealed ? Colors.white54 : Colors.cyanAccent.withOpacity(0.4),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 4,
+          // Kompakt ızgara: Ekrandan taşmaları engeller
+          SizedBox(
+            width: 220,
+            height: 220,
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: 9,
+              itemBuilder: (context, index) {
+                bool isRevealed = _revealedTiles[index];
+                bool isMine = _mineLocations[index];
+
+                return InkWell(
+                  onTap: _minesGameActive && !isRevealed && !isLocked ? () => _revealMinesTile(index, notifier) : null,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isRevealed
+                          ? (isMine ? Colors.red.shade900 : Colors.green.shade800)
+                          : Colors.black.withOpacity(0.55),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isRevealed ? Colors.white54 : Colors.cyanAccent.withOpacity(0.4),
+                        width: 1.5,
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      isRevealed ? (isMine ? '💣' : '💰') : '❓',
-                      style: const TextStyle(fontSize: 26),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black45,
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        isRevealed ? (isMine ? '💣' : '💰') : '❓',
+                        style: const TextStyle(fontSize: 22),
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
+
           if (!_minesGameActive)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.amber,
-                minimumSize: const Size(double.infinity, 48),
+                minimumSize: const Size(double.infinity, 44),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: isLocked
@@ -979,14 +986,14 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
                     },
               child: const Text(
                 'OYUNA BAŞLA (-100 Gümüş)',
-                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             )
           else
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.greenAccent.shade700,
-                minimumSize: const Size(double.infinity, 48),
+                minimumSize: const Size(double.infinity, 44),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: (_minesCurrentReward > 0 && !isLocked)
@@ -995,7 +1002,7 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
                       notifier.buyPackage(addSilver: _minesCurrentReward);
                       int net = _minesCurrentReward - entryCost;
 
-                      _triggerWinAnimation(3); // 360 Derece Halka Şok Dalgası
+                      _triggerWinAnimation(3);
 
                       setState(() {
                         _minesGameActive = false;
@@ -1006,7 +1013,7 @@ class _FortuneGamesSheetState extends ConsumerState<FortuneGamesSheet>
                   : null,
               child: Text(
                 _minesCurrentReward > 0 ? 'KAZANCI TOPLA ($_minesCurrentReward Gümüş)' : 'BİR KARE SEÇ',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
         ],
@@ -1100,19 +1107,16 @@ class _DeepCascadingWinPainter extends CustomPainter {
       double x = startX + p.vx * localT;
       double y = startY + p.vy * localT;
 
-      // Sadece ekranın en alt sınırına (%92) ulaşıldığında yumuşakça kaybolur
       double opacity = y > (size.height * 0.88)
           ? ((size.height - y) / (size.height * 0.12)).clamp(0.0, 1.0)
           : (localT > 0.90 ? (1.0 - localT) / 0.10 : 1.0);
 
-      // İkon arkasında net görünürlük sağlayan neon aura
       final glowPaint = Paint()
         ..color = p.color.withOpacity((opacity * 0.55).clamp(0.0, 1.0))
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
 
       canvas.drawCircle(Offset(x, y), p.size * 0.45, glowPaint);
 
-      // Titreşimsiz, iri ve doğrudan gözle seçilen emoji
       textPainter.text = TextSpan(
         text: p.emoji,
         style: TextStyle(
